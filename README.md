@@ -72,11 +72,9 @@ Notifications can be turned off in **Settings › App**.
 
 ## Install
 
-Download the APK from the latest run of the **Android** workflow (Actions › Android › Artifacts) and open it
-on your phone. Android asks you to allow installing apps from that source.
-
-The release APK is signed with the standard debug key so it can be sideloaded straight away. For Play Store
-distribution, set up your own signing config in `app/build.gradle.kts`.
+Download `open-cowork-android_<version>.apk` from the latest [release](../../releases) and open it on your phone.
+Android asks you to allow installing apps from that source. Builds of any branch are also available from the
+**Android** workflow (Actions › Android › Artifacts).
 
 Requirements: Android 8.0 (API 26) or newer, and an Open Cowork server your phone can reach (same Wi-Fi,
 VPN/Tailscale, or a public domain).
@@ -114,6 +112,42 @@ OPEN_COWORK_TEST_URL=http://127.0.0.1:3001 OPEN_COWORK_TEST_REPO_DIR=/tmp/oc-rep
 ```
 
 Without `OPEN_COWORK_TEST_URL` these tests are skipped.
+
+### Releases
+
+Push a version tag and the **Release** workflow tests, builds and publishes a GitHub release with the APK
+attached as `open-cowork-android_1-2-3.apk`. Release notes come from `docs/releases/<version>.md` if that file
+exists:
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+Or run it from GitHub: *Actions › Release › Run workflow*, pick the branch and enter the version (`1.2.3`). It
+creates the `v1.2.3` tag on that branch. Running it again for an existing version replaces the APK and notes.
+
+The version name comes from the tag, and the version code is derived from it (`1.2.3` → `10203`), so each
+release installs as an update over the previous one.
+
+**Signing key.** Android only installs an update over an existing app if both are signed with the same key.
+Without a key configured, CI signs with a temporary debug key that changes on every run, so users would have to
+uninstall before updating. Create a key once and store it as repository secrets
+(*Settings › Secrets and variables › Actions*):
+
+```bash
+keytool -genkeypair -v -keystore open-cowork-release.jks -alias open-cowork -keyalg RSA -keysize 4096 -validity 36500
+base64 -w0 open-cowork-release.jks   # value for ANDROID_KEYSTORE_BASE64
+```
+
+| Secret | Value |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | the base64 output above |
+| `ANDROID_KEYSTORE_PASSWORD` | the keystore password |
+| `ANDROID_KEY_ALIAS` | `open-cowork` |
+| `ANDROID_KEY_PASSWORD` | the key password (if different from the keystore password) |
+
+Keep the `.jks` file and its passwords safe: losing them means future updates can't install over existing ones.
 
 ### App icon and logo
 
