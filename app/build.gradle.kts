@@ -5,6 +5,16 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// The release workflow passes -PappVersionName=<tag without the "v">; versionCode follows from it
+// (1.2.3 -> 10203) so every release installs as an update over the previous one.
+val appVersionName: String = providers.gradleProperty("appVersionName").getOrElse("1.0.0")
+val appVersionCode: Int = appVersionName.split(".").take(3)
+    .map { part -> part.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
+    .let { p -> p.getOrElse(0) { 0 } * 10000 + p.getOrElse(1) { 0 } * 100 + p.getOrElse(2) { 0 } }
+
+// Optional release key, provided by CI from repository secrets (see README › Releases).
+val releaseKeystore: String? = System.getenv("ANDROID_KEYSTORE_FILE")?.takeIf { it.isNotBlank() }
+
 android {
     namespace = "io.github.cametendo.opencowork"
     compileSdk = 36
@@ -13,8 +23,19 @@ android {
         applicationId = "io.github.cametendo.opencowork"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
+    }
+
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -22,9 +43,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Signed with the debug key so the APK can be sideloaded straight away.
-            // Replace with your own signing config for distribution.
-            signingConfig = signingConfigs.getByName("debug")
+            // Use the release key when one is configured; otherwise the debug key, so the APK can still be sideloaded.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {
