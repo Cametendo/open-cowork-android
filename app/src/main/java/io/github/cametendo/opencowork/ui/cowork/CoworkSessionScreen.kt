@@ -234,7 +234,7 @@ fun CoworkSessionScreen(id: String, onBack: () -> Unit, onWorkspace: () -> Unit)
                             onClick = { modeMenu = true },
                             enabled = !live.running,
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
                         ) {
                             Row(Modifier.padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Icon(

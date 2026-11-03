@@ -254,6 +254,53 @@ class ServerIntegrationTest {
         assertTrue(api.repos().isEmpty() || api.repos().all { it.id.isNotBlank() })
     }
 
+    /** Needs OPEN_COWORK_TEST_REPO_DIR = the server's REPO_DIR (admins see repos placed there by hand). */
+    @Test fun repoTaskBranchDiffAndCommit() = runBlocking {
+        val repoDir = System.getenv("OPEN_COWORK_TEST_REPO_DIR")
+        assumeTrue("OPEN_COWORK_TEST_REPO_DIR not set", !repoDir.isNullOrBlank())
+        val name = "demo-${System.currentTimeMillis()}"
+        val dir = java.io.File(repoDir, name).apply { mkdirs() }
+        fun git(vararg args: String) {
+            val p = ProcessBuilder("git", "-c", "user.name=Test", "-c", "user.email=t@example.com", *args).directory(dir).redirectErrorStream(true).start()
+            val out = p.inputStream.bufferedReader().readText()
+            check(p.waitFor() == 0) { "git ${args.joinToString(" ")}: $out" }
+        }
+        git("init", "-q", "-b", "main")
+        java.io.File(dir, "README.md").writeText("# Demo\n")
+        git("add", "-A"); git("commit", "-q", "-m", "init")
+
+        val repo = api.repos().first { it.fullName.endsWith(name) }
+        assertEquals("local", repo.source)
+        assertEquals("main", repo.currentBranch)
+
+        val m = model()
+        val cowork = CoworkRepository(api, scope, platform) { false }
+        val s = cowork.create("""Add a file [[tool:write_file {"path": "hello.txt", "content": "hello\nworld\n"}]]""", m, "auto", repo.id, createBranch = true)
+        assertTrue(s.branch!!.startsWith("cowork/"))
+        assertEquals("main", s.baseBranch)
+        withTimeout(20_000) { delay(300); cowork.live.first { it[s.id]?.running == false } }
+
+        val st = api.repoStatus(repo.id)
+        assertEquals(s.branch, st.branch)
+        assertFalse(st.clean)
+        assertEquals(repo.id, st.repo?.id)
+        val changes = api.repoChanges(repo.id).files
+        val f = changes.single { it.path == "hello.txt" }
+        assertEquals(2, f.added)
+        assertTrue(f.diff.orEmpty().contains("+world"))
+
+        val commit = api.repoCommit(repo.id, "Add hello.txt")
+        assertTrue(commit.sha.isNotBlank())
+        assertTrue(commit.status!!.clean)
+        assertTrue(api.repoBranches(repo.id).local.contains(s.branch!!))
+        assertEquals(null, api.repoPullRequest(repo.id).pullRequest)
+
+        cowork.delete(s.id, deleteFiles = false)
+        assertEquals("main", api.repoCheckout(repo.id, "main", create = false).branch)
+        api.removeRepo(repo.id, deleteFiles = true)
+        assertFalse(dir.exists())
+    }
+
     private suspend fun waitIdle(repo: ChatRepository, id: String) = withTimeout(30_000) {
         delay(50)
         repo.streaming.first { id !in it }

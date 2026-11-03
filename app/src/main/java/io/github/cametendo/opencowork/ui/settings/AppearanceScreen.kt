@@ -209,7 +209,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
                     ColorSlot.ACCENT -> s.primary
                     ColorSlot.BACKGROUND -> s.background
                     ColorSlot.SURFACE -> s.surface
-                    ColorSlot.USER_BUBBLE -> s.primary
+                    ColorSlot.USER_BUBBLE -> buildChatColors(editDark, s, emptyMap()).userBubble
                     ColorSlot.ASSISTANT_BUBBLE -> buildChatColors(editDark, s, emptyMap()).assistantBubble
                 }
             } },

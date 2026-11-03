@@ -25,6 +25,7 @@ class ApprovalReceiver : BroadcastReceiver() {
         val pending = goAsync()
         container.scope.launch {
             try {
+                container.auth.awaitRestored()
                 container.cowork.approve(session, toolCall, approved, always)
             } catch (e: Exception) {
                 Toast.makeText(context.applicationContext, e.message ?: "Couldn't send your answer", Toast.LENGTH_LONG).show()

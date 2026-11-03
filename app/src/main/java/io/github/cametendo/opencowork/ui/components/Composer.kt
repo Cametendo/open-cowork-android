@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import io.github.cametendo.opencowork.ui.theme.LocalChatColors
 
 /** An image picked for a vision model: base64 for the API plus a thumbnail. */
 class Attachment(val base64: String, val thumbnail: Bitmap)
@@ -61,7 +62,7 @@ fun Composer(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        color = if (LocalChatColors.current.isDark) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLowest,
         shadowElevation = 6.dp,
         tonalElevation = 2.dp,
     ) {

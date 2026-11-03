@@ -45,18 +45,24 @@ class AuthRepository(private val api: Api, private val store: SessionStore, priv
 
     val user: User? get() = (state.value as? AuthState.SignedIn)?.user
 
+    /** Completes once the saved server address and token are loaded (used by notification actions after a cold start). */
+    private val restored = kotlinx.coroutines.CompletableDeferred<Unit>()
+    suspend fun awaitRestored() = restored.await()
+
     init {
         api.onUnauthorized = { scope.launch { signOut("Your session has expired. Please sign in again.") } }
     }
 
     suspend fun restore() {
-        val s = store.current()
+        val s = runCatching { store.current() }.getOrElse { StoredSession() }
         if (!s.signedIn) {
             _state.value = AuthState.SignedOut()
+            restored.complete(Unit)
             return
         }
         api.baseUrl = s.baseUrl
         api.token = s.token
+        restored.complete(Unit)
         val cached = s.user
         if (cached != null) _state.value = AuthState.SignedIn(cached, null, s.baseUrl!!)
         refresh(initial = cached == null)

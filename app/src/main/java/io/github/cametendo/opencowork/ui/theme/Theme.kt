@@ -99,13 +99,16 @@ private val DarkBlue = darkColorScheme(
     surfaceContainerHighest = Color(0xFF1D304E),
 )
 
+/** A deeper blue than the dark theme's accent, so white text on your own messages stays readable. */
+private val DarkUserBubble = Color(0xFF2563EB)
+
 fun defaultColor(dark: Boolean, slot: ColorSlot): Color {
     val s = if (dark) DarkBlue else LightBlue
     return when (slot) {
         ColorSlot.ACCENT -> s.primary
         ColorSlot.BACKGROUND -> s.background
         ColorSlot.SURFACE -> s.surface
-        ColorSlot.USER_BUBBLE -> s.primary
+        ColorSlot.USER_BUBBLE -> if (dark) DarkUserBubble else s.primary
         ColorSlot.ASSISTANT_BUBBLE -> if (dark) Color(0xFF13223A) else Color.White
     }
 }
@@ -130,8 +133,17 @@ val LocalChatColors = staticCompositionLocalOf {
     ChatColors(Color.Blue, Color.White, Color.White, Color.Black, Color(0xFF0B1220), Color(0xFF15803D), Color(0xFFB45309), Color(0xFF15803D), Color(0xFFB91C1C), false)
 }
 
-/** Readable text color on top of [bg]. */
-fun contentColorFor(bg: Color): Color = if (bg.luminance() > 0.45f) Color(0xFF0F1B2D) else Color(0xFFF1F6FF)
+private val DarkText = Color(0xFF0F1B2D)
+private val LightText = Color(0xFFF1F6FF)
+
+private fun contrast(a: Color, b: Color): Float {
+    val la = a.luminance() + 0.05f
+    val lb = b.luminance() + 0.05f
+    return if (la > lb) la / lb else lb / la
+}
+
+/** Readable text color on top of [bg]: whichever of dark/light text has the higher contrast ratio. */
+fun contentColorFor(bg: Color): Color = if (contrast(bg, DarkText) >= contrast(bg, LightText)) DarkText else LightText
 
 private fun mix(a: Color, b: Color, t: Float) = lerp(a, b, t)
 
@@ -178,7 +190,11 @@ fun buildColorScheme(dark: Boolean, overrides: Map<ColorSlot, Int>): ColorScheme
 }
 
 fun buildChatColors(dark: Boolean, scheme: ColorScheme, overrides: Map<ColorSlot, Int>): ChatColors {
-    val user = overrides[ColorSlot.USER_BUBBLE]?.let { Color(it) } ?: scheme.primary
+    val user = overrides[ColorSlot.USER_BUBBLE]?.let { Color(it) } ?: when {
+        !dark -> scheme.primary
+        overrides[ColorSlot.ACCENT] != null -> mix(scheme.primary, Color.Black, 0.3f)
+        else -> DarkUserBubble
+    }
     val assistant = overrides[ColorSlot.ASSISTANT_BUBBLE]?.let { Color(it) }
         ?: if (overrides[ColorSlot.SURFACE] != null) scheme.surfaceContainerLowest else defaultColor(dark, ColorSlot.ASSISTANT_BUBBLE)
     return ChatColors(

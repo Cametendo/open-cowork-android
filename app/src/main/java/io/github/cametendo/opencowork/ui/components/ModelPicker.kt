@@ -61,7 +61,7 @@ fun ModelChip(
         onClick = { open = true },
         enabled = enabled,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
         modifier = modifier,
     ) {
         Row(
