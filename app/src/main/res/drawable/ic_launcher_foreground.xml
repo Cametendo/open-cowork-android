@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Two overlapping speech bubbles: chat + cowork -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,32h30a8,8 0,0 1,8 8v16a8,8 0,0 1,-8 8H48l-10,8v-8h-4a8,8 0,0 1,-8 -8V40a8,8 0,0 1,8 -8z" />
+    <path
+        android:fillColor="#9CC2FF"
+        android:pathData="M76,46h0a8,8 0,0 1,8 8v14a8,8 0,0 1,-8 8h-2v7l-9,-7H56a8,8 0,0 1,-7 -4h15a12,12 0,0 0,12 -12z" />
+    <path
+        android:fillColor="#1D5FD1"
+        android:pathData="M38,45a3,3 0,1 1,0 0.01zM49,45a3,3 0,1 1,0 0.01zM60,45a3,3 0,1 1,0 0.01z"
+        android:strokeColor="#1D5FD1"
+        android:strokeWidth="2" />
+</vector>

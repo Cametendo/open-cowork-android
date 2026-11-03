@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Open Cowork</string>
+    <string name="channel_generation">Background replies</string>
+    <string name="channel_generation_desc">Shown while a reply or Cowork task keeps running in the background</string>
+    <string name="channel_alerts">Cowork alerts</string>
+    <string name="channel_alerts_desc">Approvals needed and finished tasks</string>
+</resources>
