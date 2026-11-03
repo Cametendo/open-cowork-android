@@ -1,3 +1,5 @@
+<img src="docs/icon.png" width="96" align="right" alt="Open Cowork icon">
+
 # Open Cowork for Android
 
 A native Android app for [Open Cowork](https://github.com/Cametendo/open-cowork), the self-hosted workspace for
@@ -113,6 +115,16 @@ OPEN_COWORK_TEST_URL=http://127.0.0.1:3001 OPEN_COWORK_TEST_REPO_DIR=/tmp/oc-rep
 
 Without `OPEN_COWORK_TEST_URL` these tests are skipped.
 
+### App icon and logo
+
+The source artwork lives in `branding/`: `app-icon.jpg` is the home-screen icon, and `logo-white.png` is the
+logo used inside the app (and for Android 13+ themed icons and the notification icon). After changing either
+file, regenerate the Android resources:
+
+```bash
+python3 tools/make_icons.py    # needs Pillow and NumPy
+```
+
 ## Project layout
 
 ```
@@ -120,4 +132,6 @@ app/src/main/java/io/github/cametendo/opencowork/
   data/          API client (OkHttp + SSE), models, repositories, Cowork event reducer, stored settings
   background/    foreground service, notifications, Allow/Deny receiver
   ui/            Compose screens: login, chat, cowork, repos, settings, admin; theme and shared components
+branding/        source artwork for the app icon and logo
+tools/           make_icons.py (turns the artwork into launcher, themed, in-app and notification icons)
 ```

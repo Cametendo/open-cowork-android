@@ -12,6 +12,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +61,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -72,6 +74,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.cametendo.opencowork.AppContainer
+import io.github.cametendo.opencowork.R
 import io.github.cametendo.opencowork.data.AuthState
 import io.github.cametendo.opencowork.data.User
 import io.github.cametendo.opencowork.ui.admin.AdminScreen
@@ -143,13 +146,20 @@ fun AppRoot(container: AppContainer, navRequests: MutableStateFlow<NavRequest?>)
     }
 }
 
+/** Brand mark: the white Open Cowork knot on a blue-to-violet tile (echoes the app icon's colors). */
 @Composable
 fun AppLogo(size: Int = 64) {
     Box(
         Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.3f).dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF3B82F6), Color(0xFF1D4ED8), Color(0xFF0B2A6B)))),
+            .background(Brush.linearGradient(listOf(Color(0xFF1A86DA), Color(0xFF2F5FD8), Color(0xFF4B3CC9)))),
         contentAlignment = Alignment.Center,
-    ) { Icon(Icons.Filled.ChatBubble, null, tint = Color.White, modifier = Modifier.size((size * 0.48f).dp)) }
+    ) {
+        Image(
+            painter = painterResource(R.drawable.logo_mark),
+            contentDescription = null,
+            modifier = Modifier.size((size * 0.8f).dp),
+        )
+    }
 }
 
 @Composable
