@@ -1,21 +1,23 @@
 name: Release
 
-# Push a tag like v1.0.0 to publish a GitHub release with the APK attached
-# as open-cowork-android_1-0-0.apk. Can also be re-run by hand for an existing tag.
+# Publishes a GitHub release with the APK attached as open-cowork-android_1-0-0.apk.
+# Either push a tag like v1.0.0, or run this workflow by hand (Actions › Release › Run workflow) with a
+# version: it builds the selected branch and creates the v<version> tag and release there. Running it
+# again for an existing release replaces the APK and notes.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Tag to (re)publish, e.g. v1.0.0"
+      version:
+        description: "Version to release, e.g. 1.0.0"
         required: true
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ inputs.tag || github.ref_name }}
+  group: release-${{ inputs.version || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -23,8 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-java@v4
         with:
@@ -36,7 +36,7 @@ jobs:
       - name: Version from tag
         id: version
         env:
-          TAG: ${{ inputs.tag || github.ref_name }}
+          TAG: ${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }}
         run: |
           case "$TAG" in
             v[0-9]*.[0-9]*.[0-9]*) ;;
@@ -101,5 +101,6 @@ jobs:
             gh release upload "$TAG" "$APK" --clobber
             gh release edit "$TAG" --title "$VERSION" --notes-file release-notes.md
           else
-            gh release create "$TAG" "$APK" --title "$VERSION" --notes-file release-notes.md --verify-tag
+            # For a manual run this also creates the tag on the commit that was built.
+            gh release create "$TAG" "$APK" --target "$GITHUB_SHA" --title "$VERSION" --notes-file release-notes.md
           fi

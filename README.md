@@ -124,6 +124,9 @@ git tag v1.2.3
 git push origin v1.2.3
 ```
 
+Or run it from GitHub: *Actions › Release › Run workflow*, pick the branch and enter the version (`1.2.3`). It
+creates the `v1.2.3` tag on that branch. Running it again for an existing version replaces the APK and notes.
+
 The version name comes from the tag, and the version code is derived from it (`1.2.3` → `10203`), so each
 release installs as an update over the previous one.
 
