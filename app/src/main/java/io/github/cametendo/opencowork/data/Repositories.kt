@@ -195,7 +195,7 @@ class ChatRepository(private val api: Api, private val scope: CoroutineScope, pr
 
     fun isStreaming(id: String) = id in streaming.value
 
-    fun send(chatId: String, model: String, content: String? = null, images: List<String>? = null, regenerate: Boolean = false, editMessageId: String? = null) {
+    fun send(chatId: String, model: String, content: String? = null, images: List<String>? = null, regenerate: Boolean = false, editMessageId: String? = null, webSearch: Boolean = false) {
         val chat = chats.value[chatId] ?: return
         if (chatId in streaming.value) return
         val ts = now()
@@ -220,6 +220,7 @@ class ChatRepository(private val api: Api, private val scope: CoroutineScope, pr
             if (content != null) put("content", content)
             if (!images.isNullOrEmpty()) putJsonArray("images") { images.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } }
             put("regenerate", regenerate)
+            if (webSearch) put("web_search", true)
             if (editMessageId != null) put("edit_message_id", editMessageId)
         }
 
@@ -249,6 +250,14 @@ class ChatRepository(private val api: Api, private val scope: CoroutineScope, pr
                             }
                             finished = true
                         }
+                        "searching" -> updateMessage(chatId, assistantId) {
+                            it.copy(searchQuery = ev.str("query"), sources = null, searchError = null)
+                        }
+                        "sources" -> {
+                            val list = ev.arr("sources")?.mapNotNull { e -> runCatching { ApiJson.decodeFromJsonElement<WebSource>(e) }.getOrNull() }.orEmpty()
+                            updateMessage(chatId, assistantId) { it.copy(searchQuery = ev.str("query") ?: it.searchQuery, sources = list) }
+                        }
+                        "search_error" -> updateMessage(chatId, assistantId) { it.copy(searchError = ev.str("error")) }
                         "title" -> ev.str("title")?.let { t ->
                             update(chatId) { it.copy(title = t) }
                             patchSummary(chatId) { it.copy(title = t) }

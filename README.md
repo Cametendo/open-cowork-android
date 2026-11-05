@@ -30,12 +30,16 @@ tasks, repositories and the admin panel, with a Material 3 UI in light and dark 
 - Model picker grouped by connection, image attachments for vision models, edit & resend, regenerate, stop,
   copy and token counts
 - Per-chat system prompt, temperature, max tokens and context length; rename, pin, delete, search, delete all
+- **Web search:** when an admin has enabled it on the server, a *Web search* switch appears next to the message box.
+  The question is searched first and the answer cites numbered sources (`[1]`, `[2]` are tappable, with source chips
+  under the reply). Works with any model.
 
 **Cowork**
 - Start a task in a new scratch folder or a cloned repository, optionally on a fresh `cowork/…` branch
 - **Ask first** or **Auto** mode. Each step shows live: plan progress, file reads, diffs for edits, streamed
   command output. You can Allow, Allow all or Deny.
 - Steer the agent while it runs, stop it, or send follow-ups
+- With web search enabled on the server, the agent can also search the web and read pages (`web_search`, `fetch_url`); these only read, so they never ask for approval
 - Workspace screen with **Progress** (plan, changed files), **Files** (browse, preview, upload, download) and
   **Git** (per-file diffs, commit, pull, push, open a pull request)
 
@@ -44,7 +48,7 @@ task in one.
 
 **Settings & admin**: default models, system prompt, Cowork instructions and approval mode, account, plus the
 full admin panel (users and roles, model connections with presets and testing, sign-up policy, automatic
-titles, Cowork limits, GitHub toggle).
+titles, Cowork limits, GitHub toggle, and **web search**: engine, SearXNG URL, API key, results per search, test button).
 
 ### Closing the app doesn't cancel anything
 
@@ -111,7 +115,8 @@ OLLAMA_BASE_URL=http://127.0.0.1:11555 REPO_DIR=/tmp/oc-repo backend/.venv/bin/p
 OPEN_COWORK_TEST_URL=http://127.0.0.1:3001 OPEN_COWORK_TEST_REPO_DIR=/tmp/oc-repo ./gradlew testDebugUnitTest
 ```
 
-Without `OPEN_COWORK_TEST_URL` these tests are skipped.
+The web search test also needs the server's fake web (`backend/tests/mock_web.py --port 8888`) and
+`OPEN_COWORK_TEST_WEB_URL=http://127.0.0.1:8888`. Without `OPEN_COWORK_TEST_URL` these tests are skipped.
 
 ### Releases
 
