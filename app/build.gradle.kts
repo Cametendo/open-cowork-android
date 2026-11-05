@@ -7,7 +7,7 @@ plugins {
 
 // The release workflow passes -PappVersionName=<tag without the "v">; versionCode follows from it
 // (1.2.3 -> 10203) so every release installs as an update over the previous one.
-val appVersionName: String = providers.gradleProperty("appVersionName").getOrElse("1.0.0")
+val appVersionName: String = providers.gradleProperty("appVersionName").getOrElse("1.1.0")
 val appVersionCode: Int = appVersionName.split(".").take(3)
     .map { part -> part.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
     .let { p -> p.getOrElse(0) { 0 } * 10000 + p.getOrElse(1) { 0 } * 100 + p.getOrElse(2) { 0 } }

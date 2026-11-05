@@ -63,6 +63,9 @@ import io.github.cametendo.opencowork.data.ChatMessage
 import io.github.cametendo.opencowork.data.ChatParams
 import io.github.cametendo.opencowork.ui.AppLogo
 import io.github.cametendo.opencowork.ui.components.AssistantContent
+import io.github.cametendo.opencowork.ui.components.SearchSummary
+import io.github.cametendo.opencowork.ui.components.SourceChips
+import io.github.cametendo.opencowork.ui.components.linkCitations
 import io.github.cametendo.opencowork.ui.components.LocalToaster
 import io.github.cametendo.opencowork.ui.theme.LocalChatColors
 import kotlinx.coroutines.Dispatchers
@@ -132,7 +135,12 @@ fun AssistantBubble(m: ChatMessage, modelName: String?, streaming: Boolean, canR
                 if (modelName != null) {
                     Text(modelName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
-                AssistantContent(m.content, m.reasoning, streaming, colors.onAssistantBubble)
+                SearchSummary(m, streaming, colors.onAssistantBubble)
+                AssistantContent(
+                    linkCitations(m.content, m.sources), m.reasoning,
+                    streaming && !(m.searchQuery != null && m.sources == null), colors.onAssistantBubble,
+                )
+                if (!streaming && !m.sources.isNullOrEmpty()) SourceChips(m.sources, colors.onAssistantBubble)
                 if (m.error != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
                         Icon(Icons.Outlined.WarningAmber, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)

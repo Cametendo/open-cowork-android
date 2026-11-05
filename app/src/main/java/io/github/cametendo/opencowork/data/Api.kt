@@ -209,6 +209,11 @@ class Api(baseClient: OkHttpClient = OkHttpClient()) {
     suspend fun deleteUser(id: String) { raw("DELETE", "/api/users/$id") }
     suspend fun adminConfig(): AdminConfig = call("GET", "/api/admin/config")
     suspend fun updateAdminConfig(patch: JsonObject): AdminConfig = call("PUT", "/api/admin/config", patch)
+    suspend fun testWebSearch(engine: String, url: String, apiKey: String?): WebSearchTest =
+        call("POST", "/api/admin/web-search/test", buildJsonObject {
+            put("engine", engine); put("url", url)
+            if (!apiKey.isNullOrBlank()) put("api_key", apiKey)
+        })
     suspend fun connections(): List<Connection> = call("GET", "/api/admin/connections")
     suspend fun createConnection(body: JsonObject): Connection = call("POST", "/api/admin/connections", body)
     suspend fun updateConnection(id: String, body: JsonObject): Connection = call("PATCH", "/api/admin/connections/$id", body)

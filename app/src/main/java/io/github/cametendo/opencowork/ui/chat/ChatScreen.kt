@@ -59,6 +59,8 @@ import io.github.cametendo.opencowork.data.ChatParams
 import io.github.cametendo.opencowork.data.WallpaperTarget
 import io.github.cametendo.opencowork.data.decodeSampled
 import io.github.cametendo.opencowork.ui.LocalContainer
+import io.github.cametendo.opencowork.ui.LocalFeatures
+import io.github.cametendo.opencowork.ui.components.WebSearchChip
 import io.github.cametendo.opencowork.ui.components.Attachment
 import io.github.cametendo.opencowork.ui.components.CenteredLoading
 import io.github.cametendo.opencowork.ui.components.Composer
@@ -92,6 +94,8 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onCreated: (String) -> Unit)
     val prefs by container.prefs.collectAsStateWithLifecycle()
     val auth by container.auth.state.collectAsStateWithLifecycle()
     val user = (auth as? AuthState.SignedIn)?.user
+    val searchAvailable = LocalFeatures.current.webSearch
+    val webSearch = searchAvailable && prefs.webSearch
 
     val chat = chatId?.let { chats[it] }
     val streaming = chatId != null && chatId in streamingSet
@@ -159,11 +163,11 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onCreated: (String) -> Unit)
             actions.launch(onError = { input = text }) {
                 val params = newParams.takeIf { it != ChatParams() }
                 val c = repo.create(m, params)
-                repo.send(c.id, m, content = text, images = images)
+                repo.send(c.id, m, content = text, images = images, webSearch = webSearch)
                 onCreated(c.id)
             }
         } else {
-            repo.send(chatId, m, content = text, images = images)
+            repo.send(chatId, m, content = text, images = images, webSearch = webSearch)
         }
     }
 
@@ -228,7 +232,7 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onCreated: (String) -> Unit)
                                         modelName = m.model?.let { modelLabel(models, it) },
                                         streaming = streaming && isLast,
                                         canRegenerate = isLast && !streaming,
-                                        onRegenerate = { model?.let { repo.send(chatId!!, it, regenerate = true) } },
+                                        onRegenerate = { model?.let { repo.send(chatId!!, it, regenerate = true, webSearch = webSearch) } },
                                     )
                                 }
                             }
@@ -250,7 +254,10 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onCreated: (String) -> Unit)
                 attachments = attachments,
                 onRemoveAttachment = { attachments.removeAt(it) },
                 onAttach = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                toolbar = { ModelChip(models, model, ::chooseModel, onRefresh = { container.models.load(true) }) },
+                toolbar = {
+                    ModelChip(models, model, ::chooseModel, onRefresh = { container.models.load(true) })
+                    if (searchAvailable) WebSearchChip(webSearch) { on -> scope.launch { container.prefsStore.setWebSearch(on) } }
+                },
                 modifier = Modifier.navigationBarsPadding().imePadding().padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 4.dp),
             )
         }
@@ -268,7 +275,7 @@ fun ChatScreen(chatId: String?, onBack: () -> Unit, onCreated: (String) -> Unit)
     editing?.let { m ->
         TextInputDialog("Edit message", m.content, singleLine = false, confirmLabel = "Send", onDismiss = { editing = null }) { text ->
             val mm = model ?: return@TextInputDialog
-            repo.send(chatId!!, mm, content = text, editMessageId = m.id)
+            repo.send(chatId!!, mm, content = text, editMessageId = m.id, webSearch = webSearch)
         }
     }
     if (renaming && chat != null) {

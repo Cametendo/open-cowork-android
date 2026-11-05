@@ -117,7 +117,7 @@ object Routes {
 }
 
 /** Which optional features this user can use (mirrors the web UI's checks). */
-data class Features(val cowork: Boolean, val github: Boolean, val admin: Boolean)
+data class Features(val cowork: Boolean, val github: Boolean, val admin: Boolean, val webSearch: Boolean = false)
 
 val LocalFeatures = staticCompositionLocalOf { Features(cowork = true, github = true, admin = false) }
 
@@ -137,6 +137,7 @@ fun AppRoot(container: AppContainer, navRequests: MutableStateFlow<NavRequest?>)
                         cowork = st.user.isAdmin || st.config?.features?.cowork != false,
                         github = st.user.isAdmin || st.config?.features?.github != false,
                         admin = st.user.isAdmin,
+                        webSearch = st.config?.features?.webSearch == true,
                     )
                     CompositionLocalProvider(LocalFeatures provides features) { MainNav(navRequests) }
                 }

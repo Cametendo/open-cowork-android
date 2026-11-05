@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.GppMaybe
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
@@ -83,6 +84,7 @@ private fun iconFor(name: String): ImageVector = when (name) {
     "search_files" -> Icons.Outlined.Search
     "run_command" -> Icons.Outlined.Terminal
     "update_plan" -> Icons.Outlined.Checklist
+    "web_search", "fetch_url" -> Icons.Outlined.Language
     else -> Icons.Outlined.Build
 }
 
@@ -94,6 +96,8 @@ fun describe(tc: ToolCall, result: CoworkMessage?): Pair<String, String> = when 
     "search_files" -> "Searched" to ("/${tc.arg("pattern")}/" + tc.arg("glob").let { if (it.isNotEmpty()) " in $it" else "" })
     "run_command" -> "Ran" to tc.arg("command")
     "update_plan" -> "Updated plan" to ""
+    "web_search" -> "Searched the web" to tc.arg("query")
+    "fetch_url" -> "Read" to tc.arg("url")
     else -> tc.name to tc.arguments.toString().take(80)
 }
 
@@ -102,6 +106,7 @@ private fun approvalVerb(name: String) = mapOf("write_file" to "Create", "edit_f
 private fun pendingVerb(name: String) = mapOf(
     "list_files" to "Listing", "read_file" to "Reading", "write_file" to "Writing", "edit_file" to "Editing",
     "search_files" to "Searching", "run_command" to "Running", "update_plan" to "Updating plan",
+    "web_search" to "Searching the web", "fetch_url" to "Reading",
 )[name] ?: "Running"
 
 @Composable

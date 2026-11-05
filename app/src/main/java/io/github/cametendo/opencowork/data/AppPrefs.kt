@@ -55,6 +55,7 @@ data class AppPrefs(
     val replyNotifications: Boolean = true,
     val lastChatModel: String? = null,
     val lastCoworkModel: String? = null,
+    val webSearch: Boolean = false,
 ) {
     fun wallpaper(t: WallpaperTarget) = wallpapers[t] ?: WallpaperSettings()
 }
@@ -65,6 +66,7 @@ class AppPrefsStore(private val context: Context) {
     private val replyNotifKey = booleanPreferencesKey("reply_notifications")
     private val lastChatModelKey = stringPreferencesKey("last_chat_model")
     private val lastCoworkModelKey = stringPreferencesKey("last_cowork_model")
+    private val webSearchKey = booleanPreferencesKey("web_search")
     private fun colorKey(dark: Boolean, slot: ColorSlot) = intPreferencesKey("${if (dark) "dark" else "light"}_${slot.key}")
     private fun wpVersion(t: WallpaperTarget) = longPreferencesKey("wp_${t.key}_version")
     private fun wpDim(t: WallpaperTarget) = floatPreferencesKey("wp_${t.key}_dim")
@@ -83,6 +85,7 @@ class AppPrefsStore(private val context: Context) {
         replyNotifications = this[replyNotifKey] ?: true,
         lastChatModel = this[lastChatModelKey],
         lastCoworkModel = this[lastCoworkModelKey],
+        webSearch = this[webSearchKey] ?: false,
     )
 
     private suspend fun edit(block: (MutablePreferences) -> Unit) {
@@ -98,6 +101,7 @@ class AppPrefsStore(private val context: Context) {
     suspend fun setReplyNotifications(on: Boolean) = edit { it[replyNotifKey] = on }
     suspend fun setLastChatModel(id: String) = edit { it[lastChatModelKey] = id }
     suspend fun setLastCoworkModel(id: String) = edit { it[lastCoworkModelKey] = id }
+    suspend fun setWebSearch(on: Boolean) = edit { it[webSearchKey] = on }
     suspend fun setWallpaperLook(t: WallpaperTarget, dim: Float, blur: Float) = edit {
         it[wpDim(t)] = dim
         it[wpBlur(t)] = blur

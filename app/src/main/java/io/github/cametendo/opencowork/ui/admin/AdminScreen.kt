@@ -82,7 +82,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
-private val Tabs = listOf("Users", "Connections", "General", "Cowork & GitHub")
+private val Tabs = listOf("Users", "Connections", "General", "Cowork & GitHub", "Web search")
 
 @Composable
 fun AdminScreen(onBack: () -> Unit) {
@@ -115,7 +115,8 @@ fun AdminScreen(onBack: () -> Unit) {
                 0 -> UsersTab(addRequest)
                 1 -> ConnectionsTab(addRequest)
                 2 -> ConfigTab(general = true)
-                else -> ConfigTab(general = false)
+                3 -> ConfigTab(general = false)
+                else -> WebSearchTab()
             }
         }
     }
@@ -520,5 +521,114 @@ private fun NumberSetting(title: String, description: String, value: Int, min: I
             )
             TextButton(onClick = { parsed?.let(onSave) }, enabled = parsed != null && parsed >= min && parsed != value) { Text("Save") }
         }
+    }
+}
+
+// ============================================================================ web search
+
+private val Engines = listOf(
+    Triple("duckduckgo", "DuckDuckGo", "No key needed, but DuckDuckGo may rate-limit automated searches"),
+    Triple("searxng", "SearXNG", "Your own server. Enable the JSON format in its settings.yml"),
+    Triple("brave", "Brave Search", "Needs an API key (has a free tier)"),
+    Triple("tavily", "Tavily", "Needs an API key (has a free tier)"),
+)
+
+@Composable
+private fun WebSearchTab() {
+    val container = LocalContainer.current
+    val api = container.api
+    val actions = rememberActions()
+    var cfg by remember { mutableStateOf<AdminConfig?>(null) }
+    LaunchedEffect(Unit) { actions.launch { cfg = api.adminConfig() } }
+    val c = cfg
+    if (c == null) { CenteredLoading(); return }
+
+    fun save(patch: JsonObject, msg: String = "Saved") = actions.launch(msg) {
+        cfg = api.updateAdminConfig(patch)
+        container.auth.refresh()
+    }
+
+    var url by remember(c.webSearchUrl) { mutableStateOf(c.webSearchUrl) }
+    var key by remember { mutableStateOf("") }
+    var testing by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<String?>(null) }
+    val needsKey = c.webSearchEngine == "brave" || c.webSearchEngine == "tavily"
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsCard {
+            SwitchRow(
+                "Enable web search",
+                "Off by default: search queries, and the pages Cowork reads, leave your server. When on, chats get a Web search switch and Cowork gets web_search and fetch_url.",
+                c.webSearchEnabled,
+            ) { save(buildJsonObject { put("web_search_enabled", it) }) }
+        }
+        SettingsCard {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Search engine", style = MaterialTheme.typography.titleSmall)
+                Engines.forEach { (id, name, hint) ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { save(buildJsonObject { put("web_search_engine", id) }) },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        androidx.compose.material3.RadioButton(c.webSearchEngine == id, onClick = { save(buildJsonObject { put("web_search_engine", id) }) })
+                        Column(Modifier.weight(1f)) {
+                            Text(name, style = MaterialTheme.typography.bodyLarge)
+                            Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (c.webSearchEngine == "searxng") {
+                    OutlinedTextField(
+                        url, { url = it.trim() }, label = { Text("SearXNG URL") }, singleLine = true,
+                        placeholder = { Text("http://localhost:8888") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    TextButton(onClick = { save(buildJsonObject { put("web_search_url", url) }) }, enabled = url != c.webSearchUrl) { Text("Save URL") }
+                }
+                if (needsKey) {
+                    OutlinedTextField(
+                        key, { key = it.trim() }, label = { Text("API key") }, singleLine = true,
+                        supportingText = { Text(if (c.webSearchHasKey) "A key is stored. Leave empty to keep it." else "Stored encrypted and never sent back.") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row {
+                        TextButton(onClick = { save(buildJsonObject { put("web_search_api_key", key) }, "Key saved"); key = "" }, enabled = key.isNotBlank()) { Text("Save key") }
+                        if (c.webSearchHasKey) TextButton(onClick = { save(buildJsonObject { put("web_search_api_key", "") }, "Key removed") }) {
+                            Text("Remove key", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(enabled = !testing, onClick = {
+                        testing = true; result = null
+                        actions.launch(onError = { testing = false }) {
+                            val r = api.testWebSearch(c.webSearchEngine, url, key.ifBlank { null })
+                            testing = false
+                            result = "✓ ${r.count} result${if (r.count == 1) "" else "s"}" + r.results.firstOrNull()?.let { ": ${it.title.ifBlank { it.host }}" }.orEmpty()
+                        }
+                    }) {
+                        Icon(Icons.Outlined.NetworkCheck, null, Modifier.size(18.dp)); Text(if (testing) "  Testing…" else "  Test search")
+                    }
+                }
+                result?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+            }
+        }
+        SettingsCard {
+            NumberSetting("Results per search", "How many results are used (1–10).", c.webSearchResultCount, min = 1) {
+                if (it in 1..10) save(buildJsonObject { put("web_search_result_count", it) }) else actions.launch { error("Choose a number from 1 to 10") }
+            }
+            SwitchRow(
+                "Allow fetching private addresses",
+                "By default fetch_url only opens public internet pages, so the agent can't reach localhost, your LAN or Tailscale machines. Turn on only if Cowork should read internal pages.",
+                c.webAllowPrivateHosts,
+            ) { save(buildJsonObject { put("web_allow_private_hosts", it) }) }
+        }
+        Text(
+            "Web pages are untrusted input. Models are told not to follow instructions found in them, but a page can still try to steer the agent, so keep Ask first on for tasks that read the web.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 20.dp),
+        )
     }
 }

@@ -301,6 +301,78 @@ class ServerIntegrationTest {
         assertFalse(dir.exists())
     }
 
+    /** Needs a server with web search (open-cowork 0.2+) and tests/mock_web.py on 127.0.0.1:8888. */
+    @Test fun webSearchChatAndCowork() = runBlocking {
+        val webUrl = System.getenv("OPEN_COWORK_TEST_WEB_URL")
+        assumeTrue("OPEN_COWORK_TEST_WEB_URL not set", !webUrl.isNullOrBlank())
+        val m = model()
+        try {
+            // Off by default: the public config hides it and a search request is refused
+            val before = api.adminConfig()
+            assertFalse(before.webSearchEnabled)
+            assertFalse(api.config().features.webSearch)
+
+            val cfg = api.updateAdminConfig(buildJsonObject {
+                put("web_search_enabled", true); put("web_search_engine", "searxng"); put("web_search_url", webUrl!!)
+                put("web_search_result_count", 2); put("web_allow_private_hosts", true)
+            })
+            assertTrue(cfg.webSearchEnabled)
+            assertEquals("searxng", cfg.webSearchEngine)
+            assertEquals(2, cfg.webSearchResultCount)
+            assertTrue(api.config().features.webSearch)
+
+            val test = api.testWebSearch("searxng", webUrl, null)
+            assertTrue(test.ok)
+            assertEquals("Vector Databases 101", test.results.first().title)
+            assertEquals("127.0.0.1", test.results.first().host)
+
+            // Brave key is stored but never echoed back
+            val keyed = api.updateAdminConfig(buildJsonObject { put("web_search_api_key", "secret-key-123") })
+            assertTrue(keyed.webSearchHasKey)
+            assertFalse(ApiJson.encodeToString(AdminConfig.serializer(), keyed).contains("secret-key-123"))
+            assertFalse(api.updateAdminConfig(buildJsonObject { put("web_search_api_key", "") }).webSearchHasKey)
+
+            // Chat: events arrive in order and the sources are saved on the message
+            val repo = ChatRepository(api, scope, platform)
+            val chat = repo.create(m)
+            repo.send(chat.id, m, content = "what is a vector database", webSearch = true)
+            waitIdle(repo, chat.id)
+            val reply = repo.chats.value[chat.id]!!.messages.last()
+            assertEquals("what is a vector database", reply.searchQuery)
+            assertEquals(2, reply.sources!!.size)
+            assertEquals("Vector Databases 101", reply.sources!![0].title)
+            assertEquals(null, reply.searchError)
+            assertTrue(reply.content.startsWith("Echo:") && reply.content.contains("web_search_results"))
+            val saved = api.chat(chat.id).messages.last()
+            assertEquals(2, saved.sources!!.size)
+            assertEquals("what is a vector database", saved.searchQuery)
+            // Without the switch nothing is searched
+            repo.send(chat.id, m, content = "plain question")
+            waitIdle(repo, chat.id)
+            assertEquals(null, repo.chats.value[chat.id]!!.messages.last().sources)
+            repo.delete(chat.id)
+
+            // Cowork: both tools run without asking, even in Ask-first mode
+            val cowork = CoworkRepository(api, scope, platform) { false }
+            val s = cowork.create(
+                """[[tool:web_search {"query": "vector databases"}]] [[tool:fetch_url {"url": "$webUrl/page"}]]""",
+                m, "ask", null, false,
+            )
+            val done = withTimeout(30_000) { cowork.live.first { it[s.id]?.running == false && it[s.id]!!.messages.count { x -> x.role == "tool" } >= 2 } }[s.id]!!
+            assertTrue(done.approvals.isEmpty())
+            val tools = done.messages.filter { it.role == "tool" }
+            assertEquals(listOf("web_search", "fetch_url"), tools.map { it.name })
+            assertEquals(false, tools[0].isError)
+            assertTrue(tools[0].content.contains("Vector Databases 101"))
+            assertTrue(tools[1].content.contains("Vector Databases 101") && tools[1].content.contains("nearest"))
+            assertEquals("web_search", done.toolCall(tools[0].toolCallId!!)?.name)
+            assertEquals("vector databases", done.toolCall(tools[0].toolCallId!!)?.arg("query"))
+            cowork.delete(s.id, deleteFiles = true)
+        } finally {
+            api.updateAdminConfig(buildJsonObject { put("web_search_enabled", false); put("web_allow_private_hosts", false) })
+        }
+    }
+
     private suspend fun waitIdle(repo: ChatRepository, id: String) = withTimeout(30_000) {
         delay(50)
         repo.streaming.first { id !in it }

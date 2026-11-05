@@ -46,7 +46,12 @@ data class UserSettings(
 data class AuthSession(val token: String, val tokenType: String = "Bearer", val user: User)
 
 @Serializable
-data class Features(val enableSignup: Boolean = false, val cowork: Boolean = true, val github: Boolean = true)
+data class Features(
+    val enableSignup: Boolean = false,
+    val cowork: Boolean = true,
+    val github: Boolean = true,
+    val webSearch: Boolean = false,
+)
 
 @Serializable
 data class PublicConfig(
@@ -68,7 +73,23 @@ data class AdminConfig(
     val coworkMaxSteps: Int = 40,
     val coworkOllamaNumCtx: Int = 16384,
     val githubEnabled: Boolean = true,
+    val webSearchEnabled: Boolean = false,
+    val webSearchEngine: String = "duckduckgo",
+    val webSearchUrl: String = "",
+    val webSearchResultCount: Int = 5,
+    val webAllowPrivateHosts: Boolean = false,
+    /** Read-only: whether an API key is stored (the key itself is never sent back). */
+    val webSearchHasKey: Boolean = false,
 )
+
+@Serializable
+data class WebSource(val title: String = "", val url: String, val snippet: String = "") {
+    val host: String
+        get() = runCatching { java.net.URI(url).host?.removePrefix("www.") }.getOrNull().orEmpty().ifEmpty { url }
+}
+
+@Serializable
+data class WebSearchTest(val ok: Boolean = false, val count: Int = 0, val results: List<WebSource> = emptyList())
 
 // ---------------------------------------------------------------- models & connections
 
@@ -114,6 +135,10 @@ data class ChatMessage(
     val error: String? = null,
     val stopped: Boolean? = null,
     val usage: JsonObject? = null,
+    /** Web search used for this answer. `sources == null` while the search is still running. */
+    val sources: List<WebSource>? = null,
+    val searchQuery: String? = null,
+    val searchError: String? = null,
     val createdAt: Double = 0.0,
 ) {
     val completionTokens: Int?
